@@ -1,1 +1,1 @@
-{"plugins":["cordova-sqlite-storage","cordova-plugin-x-socialsharing","cordova-plugin-inappbrowser","cordova-plugin-network-information","es6-promise-plugin"]}
+{"plugins":["cordova-sqlite-storage","cordova-plugin-x-socialsharing","cordova-plugin-inappbrowser","cordova-plugin-network-information","es6-promise-plugin","cordova-plugin-customurlscheme"]}

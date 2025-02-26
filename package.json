@@ -14,6 +14,7 @@
   "license": "Apache-2.0",
   "devDependencies": {
     "cordova-android": "^13.0.0",
+    "cordova-plugin-customurlscheme": "^5.0.2",
     "cordova-plugin-inappbrowser": "^6.0.0",
     "cordova-plugin-network-information": "^3.0.0",
     "cordova-plugin-x-socialsharing": "^6.0.4",
@@ -25,7 +26,13 @@
       "cordova-sqlite-storage": {},
       "cordova-plugin-x-socialsharing": {},
       "cordova-plugin-inappbrowser": {},
-      "cordova-plugin-network-information": {}
+      "cordova-plugin-network-information": {},
+      "cordova-plugin-customurlscheme": {
+        "URL_SCHEME": "myapp",
+        "ANDROID_SCHEME": " ",
+        "ANDROID_HOST": " ",
+        "ANDROID_PATHPREFIX": "/"
+      }
     },
     "platforms": [
       "android"

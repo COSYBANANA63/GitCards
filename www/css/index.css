@@ -510,6 +510,27 @@ body {
     opacity: 1;
 }
 
+.status-message.visible {
+    bottom: 20px;
+}
+
+.status-message.success {
+    background-color: #10b981;
+}
+
+.status-message.error {
+    background-color: #ef4444;
+}
+
+.status-message.info {
+    background-color: #3b82f6;
+}
+
+/* Utility class */
+.hidden {
+    display: none !important;
+}
+
 /* Prevent overscroll and add momentum scrolling */
 html, body {
     height: 100%;
@@ -1095,7 +1116,7 @@ input:active, button:active {
 /* Theme toggle button */
 .theme-toggle {
     /* position: fixed; */
-    top: 12px;
+    top: 8px;
     right: 12px;
     width: 40px;
     height: 40px;
@@ -1186,3 +1207,108 @@ body.dark-theme .cancel-button {
     padding-right: 50px; 
 }
 
+
+/* GitHub username modal */
+.github-username-modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+}
+
+.modal-content {
+    background-color: var(--card-bg-color, white);
+    border-radius: 12px;
+    padding: 24px;
+    width: 80%;
+    max-width: 400px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+}
+
+.modal-content h3 {
+    margin-top: 0;
+    margin-bottom: 16px;
+    font-size: 18px;
+    color: var(--text-color, #333);
+}
+
+#githubUsernameInput {
+    width: 100%;
+    padding: 10px 12px;
+    border: 1px solid #ddd;
+    border-radius: 6px;
+    font-size: 16px;
+    margin-bottom: 16px;
+}
+
+.modal-buttons {
+    display: flex;
+    justify-content: flex-end;
+    gap: 12px;
+}
+
+.modal-buttons button {
+    padding: 8px 16px;
+    border-radius: 6px;
+    border: none;
+    font-size: 14px;
+    cursor: pointer;
+}
+
+#cancelUsernameButton {
+    background-color: #f1f1f1;
+    color: #333;
+}
+
+#submitUsernameButton {
+    background-color: #2563eb;
+    color: white;
+}
+
+/* Header user info styles */
+.header-user-info {
+    display: flex;
+    align-items: center;
+    margin-left: auto;
+    padding: 0 10px;
+}
+
+.header-avatar {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    margin-right: 8px;
+}
+
+.header-username {
+    font-size: 14px;
+    font-weight: 500;
+}
+
+.change-profile-button {
+    background: none;
+    border: none;
+    cursor: pointer;
+    color: var(--text-color);
+    margin-left: 8px;
+    padding: 4px;
+    border-radius: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.change-profile-button:hover {
+    background-color: rgba(0, 0, 0, 0.1);
+}
+
+/* Loading indicator visibility */
+.loading.visible {
+    display: flex;
+}

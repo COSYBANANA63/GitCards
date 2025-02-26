@@ -36,21 +36,29 @@ function onDeviceReady() {
         `);
 
         //table for messages
-    tx.executeSql(`
-        CREATE TABLE IF NOT EXISTS profile_messages (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            profile_id INTEGER,
-            message TEXT,
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            FOREIGN KEY (profile_id) REFERENCES github_profiles (id)
-        )
-    `);
+        tx.executeSql(`
+            CREATE TABLE IF NOT EXISTS profile_messages (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                profile_id INTEGER,
+                sender_username TEXT,
+                receiver_username TEXT,
+                message TEXT,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (profile_id) REFERENCES github_profiles (id)
+            )
+        `);
     }, (error) => {
         console.log('Error creating table:', error);
         showStatusMessage('Error initializing database');
     }, () => {
         loadSavedProfiles(); // Load saved profiles on startup
     });
+    // Check if user is already logged in
+    const savedUsername = localStorage.getItem("github_username");
+    if (savedUsername) {
+        loadOrCreateUserProfile(savedUsername);
+    }
+    
 
     // Event listeners
     document.getElementById('searchButton').addEventListener('click', searchGitHubProfile);
@@ -80,6 +88,7 @@ function onDeviceReady() {
         }
     });
     addMessageStyles();
+    addRepoDetailsStyling();
     setupNetworkMonitoring();
     // Add touch feedback
     addTouchFeedback();
@@ -520,9 +529,9 @@ function createReposList(repos, username) {
     return `
         <div class="details-list">
             ${repos.map(repo => `
-                <div class="details-item">
+                <div class="details-item" onclick="showRepoDetails('${username}', '${repo.name}')">
                     <h3>
-                        <a href="${repo.html_url}" target="_blank">${repo.name}</a>
+                        <a href="#" onclick="event.stopPropagation();">${repo.name}</a>
                         ${repo.fork ? '<span class="badge">Fork</span>' : ''}
                     </h3>
                     <p>${repo.description || 'No description available'}</p>
@@ -551,6 +560,476 @@ function createReposList(repos, username) {
         ${createPaginationControls(currentPage, totalPages, username)}
     `;
 }
+
+function showRepoDetails(username, repoName) {
+    showLoading();
+    
+    // Fetch the repository details
+    fetch(`https://api.github.com/repos/${username}/${repoName}`)
+        .then(response => {
+            if (!response.ok) throw new Error('Failed to fetch repository details');
+            return response.json();
+        })
+        .then(repo => {
+            // Fetch README content if available
+            return fetch(`https://api.github.com/repos/${username}/${repoName}/readme`)
+                .then(response => {
+                    if (!response.ok) {
+                        // If README not found, return null
+                        return null;
+                    }
+                    return response.json();
+                })
+                .catch(() => null)
+                .then(readmeData => {
+                    // Create and show detailed repository view
+                    const detailsContent = createRepoDetailsView(repo, readmeData, username);
+                    showDetailsCard(`Repository: ${repo.name}`, detailsContent);
+                    hideLoading();
+                });
+        })
+        .catch(error => {
+            console.error('Error fetching repository details:', error);
+            hideLoading();
+            showStatusMessage('Failed to fetch repository details');
+        });
+}
+
+function createRepoDetailsView(repo, readmeData, username) {
+    // Download ZIP URL
+    const downloadUrl = `https://github.com/${repo.owner.login}/${repo.name}/archive/refs/heads/${repo.default_branch}.zip`;
+    
+    let readmeContent = '<p class="readme-placeholder">No README found for this repository.</p>';
+    
+    if (readmeData) {
+        // GitHub API returns README content as base64 encoded
+        try {
+            const decodedContent = atob(readmeData.content);
+            // Very simple markdown rendering (just for demonstration)
+            readmeContent = `<div class="readme-content">${decodedContent.replace(/\n/g, '<br>')}</div>`;
+        } catch (e) {
+            console.error('Error decoding README content:', e);
+            readmeContent = '<p class="readme-placeholder">Error loading README content.</p>';
+        }
+    }
+    
+    return `
+        <div class="repo-details">
+            <div class="repo-header">
+                <h2>${repo.full_name}</h2>
+                <p>${repo.description || 'No description available'}</p>
+            </div>
+            
+            <div class="repo-stats">
+                <div class="stat-badge">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="16" height="16">
+                        <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon>
+                    </svg>
+                    <span>${repo.stargazers_count} stars</span>
+                </div>
+                
+                <div class="stat-badge">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="16" height="16">
+                        <line x1="6" y1="3" x2="6" y2="15"></line>
+                        <circle cx="18" cy="6" r="3"></circle>
+                        <circle cx="6" cy="18" r="3"></circle>
+                        <path d="M18 9a9 9 0 0 1-9 9"></path>
+                    </svg>
+                    <span>${repo.forks_count} forks</span>
+                </div>
+                
+                <div class="stat-badge">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="16" height="16">
+                        <circle cx="12" cy="12" r="10"></circle>
+                        <line x1="12" y1="8" x2="12" y2="12"></line>
+                        <line x1="12" y1="16" x2="12.01" y2="16"></line>
+                    </svg>
+                    <span>${repo.open_issues_count} issues</span>
+                </div>
+                
+                ${repo.language ? `
+                <div class="stat-badge">
+                    <span class="language-dot" style="background-color: ${getLanguageColor(repo.language)}"></span>
+                    <span>${repo.language}</span>
+                </div>
+                ` : ''}
+                
+                <div class="stat-badge">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="16" height="16">
+                        <circle cx="12" cy="12" r="10"></circle>
+                        <polyline points="12 6 12 12 16 14"></polyline>
+                    </svg>
+                    <span>Updated ${formatDate(repo.updated_at)}</span>
+                </div>
+            </div>
+            
+            <div class="repo-actions">
+                <a href="${repo.html_url}" target="_blank" class="repo-action-button">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="16" height="16">
+                        <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path>
+                        <polyline points="15 3 21 3 21 9"></polyline>
+                        <line x1="10" y1="14" x2="21" y2="3"></line>
+                    </svg>
+                    View on GitHub
+                </a>
+                
+                <a href="${downloadUrl}" target="_blank" class="repo-action-button download-button" onclick="trackDownload('${username}', '${repo.name}')">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="16" height="16">
+                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                        <polyline points="7 10 12 15 17 10"></polyline>
+                        <line x1="12" y1="15" x2="12" y2="3"></line>
+                    </svg>
+                    Download ZIP
+                </a>
+            </div>
+            
+            <div class="repo-tabs">
+                <div class="tab-header">
+                    <button class="tab-button active" onclick="switchRepoTab(this, 'readme')">README</button>
+                    <button class="tab-button" onclick="switchRepoTab(this, 'files')">Files</button>
+                    <button class="tab-button" onclick="switchRepoTab(this, 'commits')">Commits</button>
+                </div>
+                
+                <div class="tab-content" id="readme-tab">
+                    ${readmeContent}
+                </div>
+                
+                <div class="tab-content hidden" id="files-tab">
+                    <div class="loading-files">
+                        <p>Loading files...</p>
+                    </div>
+                </div>
+                
+                <div class="tab-content hidden" id="commits-tab">
+                    <div class="loading-commits">
+                        <p>Loading commit history...</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+}
+
+function switchRepoTab(button, tabName) {
+    // Update active button
+    const allTabButtons = document.querySelectorAll('.tab-button');
+    allTabButtons.forEach(btn => btn.classList.remove('active'));
+    button.classList.add('active');
+    
+    // Hide all tab contents
+    const allTabContents = document.querySelectorAll('.tab-content');
+    allTabContents.forEach(tab => tab.classList.add('hidden'));
+    
+    // Show selected tab
+    const selectedTab = document.getElementById(`${tabName}-tab`);
+    if (selectedTab) {
+        selectedTab.classList.remove('hidden');
+    }
+    
+    // Load content if needed
+    const username = document.getElementById('githubSearch').value.trim();
+    const repoName = document.querySelector('.repo-header h2').textContent.split('/')[1];
+    
+    if (tabName === 'files' && !selectedTab.querySelector('.file-list')) {
+        loadRepoFiles(username, repoName);
+    } else if (tabName === 'commits' && !selectedTab.querySelector('.commit-list')) {
+        loadRepoCommits(username, repoName);
+    }
+}
+
+// Function to load repository files
+function loadRepoFiles(username, repoName) {
+    const filesTab = document.getElementById('files-tab');
+    
+    fetch(`https://api.github.com/repos/${username}/${repoName}/contents`)
+        .then(response => {
+            if (!response.ok) throw new Error('Failed to fetch repository files');
+            return response.json();
+        })
+        .then(files => {
+            let fileListHTML = '<div class="file-list">';
+            
+            // Sort: directories first, then files
+            files.sort((a, b) => {
+                if (a.type === 'dir' && b.type !== 'dir') return -1;
+                if (a.type !== 'dir' && b.type === 'dir') return 1;
+                return a.name.localeCompare(b.name);
+            });
+            
+            files.forEach(file => {
+                const isDir = file.type === 'dir';
+                fileListHTML += `
+                    <div class="file-item">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="16" height="16" class="file-icon">
+                            ${isDir 
+                                ? '<path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path>' 
+                                : '<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline>'}
+                        </svg>
+                        <a href="${file.html_url}" target="_blank" class="file-name">${file.name}</a>
+                    </div>
+                `;
+            });
+            
+            fileListHTML += '</div>';
+            filesTab.innerHTML = fileListHTML;
+        })
+        .catch(error => {
+            console.error('Error loading repository files:', error);
+            filesTab.innerHTML = '<p class="error-message">Failed to load repository files. Please try again later.</p>';
+        });
+}
+
+// Function to load repository commits
+function loadRepoCommits(username, repoName) {
+    const commitsTab = document.getElementById('commits-tab');
+    
+    fetch(`https://api.github.com/repos/${username}/${repoName}/commits?per_page=10`)
+        .then(response => {
+            if (!response.ok) throw new Error('Failed to fetch repository commits');
+            return response.json();
+        })
+        .then(commits => {
+            let commitListHTML = '<div class="commit-list">';
+            
+            commits.forEach(commit => {
+                const author = commit.author ? commit.author.login : (commit.commit.author ? commit.commit.author.name : 'Unknown');
+                const avatarUrl = commit.author ? commit.author.avatar_url : 'https://github.githubassets.com/images/modules/logos_page/GitHub-Mark.png';
+                const message = commit.commit.message;
+                const date = formatDate(commit.commit.author.date);
+                
+                commitListHTML += `
+                    <div class="commit-item">
+                        <img src="${avatarUrl}" alt="${author}" class="commit-avatar">
+                        <div class="commit-details">
+                            <div class="commit-message">${message.split('\n')[0]}</div>
+                            <div class="commit-meta">
+                                <span class="commit-author">${author}</span>
+                                <span class="commit-date">committed ${date}</span>
+                            </div>
+                        </div>
+                        <a href="${commit.html_url}" target="_blank" class="commit-sha">
+                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="14" height="14">
+                                <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path>
+                                <polyline points="15 3 21 3 21 9"></polyline>
+                                <line x1="10" y1="14" x2="21" y2="3"></line>
+                            </svg>
+                        </a>
+                    </div>
+                `;
+            });
+            
+            commitListHTML += '</div>';
+            commitsTab.innerHTML = commitListHTML;
+        })
+        .catch(error => {
+            console.error('Error loading repository commits:', error);
+            commitsTab.innerHTML = '<p class="error-message">Failed to load repository commits. Please try again later.</p>';
+        });
+}
+
+// Function to track downloads (optional)
+function trackDownload(username, repoName) {
+    console.log(`Download requested for ${username}/${repoName}`);
+    showStatusMessage(`Downloading ${repoName}.zip...`);
+    
+    // You could track this in analytics or in your SQLite DB if desired
+}
+
+// Add these styles to your CSS or add them to the addMessageStyles function
+function addRepoDetailsStyles() {
+    const style = document.createElement('style');
+    style.textContent = `
+        /* Repository Details View */
+        .repo-details {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+        
+        .repo-header {
+            margin-bottom: 0.5rem;
+        }
+        
+        .repo-stats {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.75rem;
+            margin-bottom: 1rem;
+        }
+        
+        .stat-badge {
+            display: flex;
+            align-items: center;
+            gap: 0.25rem;
+            padding: 0.25rem 0.5rem;
+            background-color: var(--light-gray);
+            border-radius: 1rem;
+            font-size: 0.85rem;
+        }
+        
+        .repo-actions {
+            display: flex;
+            gap: 0.75rem;
+            margin-bottom: 1rem;
+        }
+        
+        .repo-action-button {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.5rem 1rem;
+            border-radius: 0.5rem;
+            background-color: var(--primary-color);
+            color: white;
+            text-decoration: none;
+            font-weight: 500;
+            transition: background-color 0.2s;
+        }
+        
+        .repo-action-button:hover {
+            background-color: var(--primary-dark);
+        }
+        
+        .download-button {
+            background-color: var(--success-color);
+        }
+        
+        .download-button:hover {
+            background-color: var(--success-dark);
+        }
+        
+        .repo-tabs {
+            border: 1px solid var(--border-color);
+            border-radius: 0.5rem;
+            overflow: hidden;
+        }
+        
+        .tab-header {
+            display: flex;
+            background-color: var(--light-gray);
+            border-bottom: 1px solid var(--border-color);
+        }
+        
+        .tab-button {
+            flex: 1;
+            padding: 0.75rem;
+            background: none;
+            border: none;
+            font-weight: 500;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+        
+        .tab-button:not(:last-child) {
+            border-right: 1px solid var(--border-color);
+        }
+        
+        .tab-button.active {
+            background-color: white;
+            border-bottom: 2px solid var(--primary-color);
+        }
+        
+        .tab-content {
+            padding: 1rem;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+        
+        .tab-content.hidden {
+            display: none;
+        }
+        
+        .readme-content {
+            white-space: pre-wrap;
+            line-height: 1.5;
+        }
+        
+        .readme-placeholder {
+            color: var(--gray);
+            text-align: center;
+            padding: 2rem;
+        }
+        
+        /* File list styling */
+        .file-list {
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .file-item {
+            display: flex;
+            align-items: center;
+            padding: 0.5rem;
+            border-bottom: 1px solid var(--light-gray);
+        }
+        
+        .file-icon {
+            margin-right: 0.5rem;
+            color: var(--primary-color);
+        }
+        
+        .file-name {
+            text-decoration: none;
+            color: var(--text-color);
+        }
+        
+        /* Commit list styling */
+        .commit-list {
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+        }
+        
+        .commit-item {
+            display: flex;
+            padding: 0.75rem;
+            border: 1px solid var(--light-gray);
+            border-radius: 0.5rem;
+            align-items: center;
+        }
+        
+        .commit-avatar {
+            width: 2rem;
+            height: 2rem;
+            border-radius: 50%;
+            margin-right: 0.75rem;
+        }
+        
+        .commit-details {
+            flex: 1;
+        }
+        
+        .commit-message {
+            font-weight: 500;
+            margin-bottom: 0.25rem;
+        }
+        
+        .commit-meta {
+            display: flex;
+            gap: 0.5rem;
+            font-size: 0.85rem;
+            color: var(--gray);
+        }
+        
+        .commit-sha {
+            color: var(--gray);
+            padding: 0.25rem;
+        }
+        
+        /* Make repository cards interactive */
+        .details-item {
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+        
+        .details-item:hover {
+            background-color: var(--light-gray);
+        }
+    `;
+    
+    document.head.appendChild(style);
+}
+
 
 // Create HTML for users list (followers or following) with pagination
 function createUsersList(users, type, username) {
@@ -825,7 +1304,7 @@ function setupNetworkMonitoring() {
 }
 
 // Modify our network operations to handle errors better
-function searchGitHubProfile() {
+function searchGitHubProfile() { 
     const username = document.getElementById('githubSearch').value.trim();
     if (!username) {
         showStatusMessage('Please enter a GitHub username');
@@ -1370,3 +1849,4 @@ function addMessageStyles() {
     
     document.head.appendChild(styleElement);
 }
+
