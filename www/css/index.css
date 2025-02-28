@@ -394,7 +394,7 @@ body {
 }
 
 .menu-dots-button {
-    background: rgba(255, 255, 255, 0.8);
+    background: var(--secondary);
     border: none;
     border-radius: 50%;
     width: 32px;
@@ -404,18 +404,27 @@ body {
     justify-content: center;
     cursor: pointer;
     padding: 0;
-    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
-    transition: background-color 0.2s;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.15);
+    transition: all 0.2s ease;
 }
 
 .menu-dots-button:hover {
-    background: rgba(255, 255, 255, 1);
+    background: var(--primary);
+}
+
+.menu-dots-button:hover .dots-icon {
+    color: var(--dark); /* Will be white in dark mode */
+}
+
+.menu-dots-button:active {
+    transform: translateY(1px);
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
 }
 
 .dots-icon {
     width: 20px;
     height: 20px;
-    color: #333;
+    color: var(--gray);
     transform: rotate(90deg); /* Make dots vertical */
 }
 
@@ -423,12 +432,25 @@ body {
     position: absolute;
     top: 40px;
     right: 0;
-    background: white;
-    border-radius: 8px;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-    width: 180px;
+    background: var(--light); /* Will be dark in dark mode, white in light mode */
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    width: 200px;
     z-index: 20;
     overflow: hidden;
+    border: 1px solid var(--light-gray);
+    animation: dropdownFadeIn 0.2s ease;
+}
+
+@keyframes dropdownFadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(-8px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
 }
 
 .card-menu-dropdown.hidden {
@@ -439,22 +461,113 @@ body {
     display: flex;
     align-items: center;
     width: 100%;
-    padding: 10px 16px;
+    padding: 12px 16px;
     border: none;
     background: transparent;
     text-align: left;
     cursor: pointer;
-    transition: background-color 0.2s;
+    transition: background-color 0.2s, color 0.2s;
+    color: var(--dark); /* Will be white in dark mode, black in light mode */
+    font-weight: 500;
+    font-size: 14px;
 }
 
 .card-menu-dropdown button:hover {
-    background-color: #f5f5f5;
+    background-color: var(--secondary);
+}
+
+.card-menu-dropdown button:active {
+    background-color: var(--light-gray);
+}
+
+/* Add a subtle divider between items */
+.card-menu-dropdown button:not(:last-child) {
+    border-bottom: 1px solid var(--light-gray);
+}
+
+/* Customize different action buttons */
+.card-menu-dropdown .share-action .action-icon,
+.card-menu-dropdown .delete-action .action-icon,
+.card-menu-dropdown .message-action .action-icon,
+.card-menu-dropdown .github-action .action-icon {
+    color: var(--dark); /* Will be white in dark mode, black in light mode */
+}
+
+.card-menu-dropdown .share-action:hover {
+    color: var(--primary);
+}
+
+.card-menu-dropdown .share-action:hover .action-icon {
+    color: var(--primary);
+}
+
+.card-menu-dropdown .delete-action:hover {
+    color: #e53935; /* Red for delete */
+}
+
+.card-menu-dropdown .delete-action:hover .action-icon {
+    color: #e53935;
+}
+
+.card-menu-dropdown .github-action:hover {
+    color: #24292e; /* GitHub color in light mode */
+}
+
+html[data-theme="dark"] .github-action:hover {
+    color: #ffffff; /* GitHub color in dark mode */
+}
+
+.card-menu-dropdown .message-action:hover {
+    color: #4caf50; /* Green for messages */
+}
+
+.card-menu-dropdown .message-action:hover .action-icon {
+    color: #4caf50;
 }
 
 .card-menu-dropdown .action-icon {
     width: 18px;
     height: 18px;
     margin-right: 12px;
+    flex-shrink: 0;
+}
+
+/* For light mode - these styles are added by JavaScript when theme changes */
+html[data-theme="light"] .menu-dots-button {
+    background: var(--light-secondary);
+}
+
+html[data-theme="light"] .menu-dots-button:hover {
+    background: var(--light-primary);
+}
+
+html[data-theme="light"] .dots-icon {
+    color: var(--light-gray);
+}
+
+html[data-theme="light"] .card-menu-dropdown {
+    background: var(--light-light);
+    border-color: var(--light-light-gray);
+}
+
+html[data-theme="light"] .card-menu-dropdown button {
+    color: var(--light-dark);
+}
+
+html[data-theme="light"] .card-menu-dropdown button:not(:last-child) {
+    border-bottom-color: var(--light-light-gray);
+}
+
+html[data-theme="light"] .card-menu-dropdown .action-icon {
+    color: var(--light-dark);
+}
+
+html[data-theme="light"] .card-menu-dropdown button:hover {
+    background-color: var(--light-secondary);
+}
+
+html[data-theme="light"] .card-menu-dropdown button:active {
+    background-color: var(--light-light-gray);
 }
 
 .saved-card-stats {
