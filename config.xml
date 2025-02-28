@@ -1,9 +1,9 @@
 <?xml version='1.0' encoding='utf-8'?>
 <widget id="com.ICAROSTUDIO.gitcard" version="1.0.0" xmlns="http://www.w3.org/ns/widgets" xmlns:cdv="http://cordova.apache.org/ns/1.0">
-    <name>GitCards</name>
-    <description>Sample Apache Cordova App</description>
-    <author email="dev@cordova.apache.org" href="https://cordova.apache.org">
-        Apache Cordova Team
+    <name>GitShare</name>
+    <description>An app integrated with github to search up users quickly, view their repositories, and share them with others. Along with all the other important features like easy downloading of a repository, a github link to redirect over to github to view, and so many more, chat with users whose profile you've saved and even view their profile. Share solutions to repositoriesm in chat, or simply discuss.</description>
+    <author email="tobyfemi55@gmail.com" href="https://cosybanana63.github.io">
+        IICARUSTUDIO
     </author>
     <content src="index.html" />
     <allow-intent href="http://*/*" />
